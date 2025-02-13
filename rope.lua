@@ -19,11 +19,6 @@ local function isOdd(num)
   end
 end
 
-local function isMeta(t,mt)
-  if getmetatable(t)==mt then return true end
-  return false
-end
-
 
 -- node meta
 function n_mt.__tostring(self)
