@@ -1,15 +1,20 @@
-local c = require"curses"
+local env = ...
+local stdscr = env.stdscr
 
-local stdscr = c.initscr()
+while not env.exitcode do
+  env.input = stdscr:getch()
 
-c.cbreak()
-c.echo(false)
-stdscr:keypad(true)
+  local command = assert(env.bind[env.mode], "unknown mode")[env.input]
+  local cmdtype = type(command)
+  if cmdtype == "nil" then
+    command = "unbound"
+  elseif cmdtype == "table" then
+    -- menu command
+  elseif cmdtype ~= "string" then
+    error("Bind returned impossible type")
+  end
 
-while true do
-  local ch = stdscr:getch()
-  if ch==10 then break end
-  local status, char = pcall(string.char,ch)
-  stdscr:addstr(status and char or ch)
+  env.cmds[command](env)
 end
-c.endwin()
+
+return env.exitcode
