@@ -1,32 +1,15 @@
-local curses = require"curses"
+local c = require"curses"
 
--- for a,b in next,curses do print(a,b) end
+local stdscr = c.initscr()
 
---[[
-local commands = setmetatable({
-  quit = error
-},{
-  __index = function(t,k)
-    return k
-  end
-})
-]]
-
-local file = assert(io.open(arg[1],"r"))
-local fc = file:read("a")
-assert(file:close())
-
-local stdin = curses.initscr()
-stdin:addstr(fc)
-
-curses.cbreak()
-curses.echo(false)
-stdin:keypad(true)
+c.cbreak()
+c.echo(false)
+stdscr:keypad(true)
 
 while true do
-  local ch = stdin:getch()
+  local ch = stdscr:getch()
   if ch==10 then break end
   local status, char = pcall(string.char,ch)
-  stdin:addstr(status and char or ch)
+  stdscr:addstr(status and char or ch)
 end
-curses.endwin()
+c.endwin()
