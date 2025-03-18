@@ -1,5 +1,5 @@
 -- local c = require"curses"
-local env = ...
+local env,_,opts = ...
 
 while not env.exitcode do
   env.input = env.stdscr:getch()
@@ -19,18 +19,19 @@ while not env.exitcode do
     if cmdtype == "nil" then
       -- key is not bound according to env.bind
 
-      --[[ env.stdscr:addstr(
+      if opts.debug then
+      env.stdscr:addstr(
         env.mode
         ..((#env.menu > 0) and ("+"..table.concat(env.menu,"+")) or (""))
         .."."..env.input
-      ) --]]
+      )
+      end
 
       if #env.menu > 0 then
         env.menu = {}
       end
     elseif cmdtype == "table" then
       -- cmdtype table means a menu
-      -- env.stdscr:addstr("menu")
       table.insert(env.menu,env.input)
     elseif cmdtype ~= "string" then
       error("Bind returned impossible type")
