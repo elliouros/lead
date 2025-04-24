@@ -1,20 +1,18 @@
 -- literally just initializes the environment. Contains default settings and
 -- binds as well as functions.
-local lfs = require"lfs"
--- this is the *only* use of lfs. wtfuck.
-local env = {
-  menu = {},
-  mode = "normal",
-}
+local env = ...
+
+env.mode = "normal"
+env.menu = {}
 
 -- env.buffers = {}
 env.cmds = setmetatable({
   quit = function(state)
     state.exitcode = 0
   end,
-  error = function()
-    error("controlled error")
-  end,
+  -- error = function()
+  --   error("controlled error")
+  -- end,
   clear = function(state)
     state.stdscr:clear()
   end,
@@ -66,9 +64,10 @@ env.cmds = setmetatable({
 env.bind = {
   normal = {
     [113] = "quit",
-    [99] = "clear",
+    [99]  = "clear",
 
     [105] = "/insert",
+    [58]  = "/command",
     [100] = "delete",
     [104] = "left",
     [106] = "down",
@@ -89,17 +88,99 @@ env.bind = {
       end
     end
   }),
+  command = {
+    [27]  = "/normal",
+  }
 }
 
-env.mode = "normal"
-
-for file in lfs.dir("config") do
-  -- TODO: make an actual config directory in an actual config directory
-  -- location (idk how to do this esp with Lua)
-  if file~="." and file~=".." then
-    assert(loadfile(file),"Could not load config file ",file)(env)
+env.render = setmetatable({
+  -- Called as env:render() i.e. env.render(env)
+  {
+    name = "gutter",
+    exec = function(state)
+      local maxy,maxx = state.stdscr:getmaxyx()
+    end,
+    width = 4,
+    "line",
+  },
+  {
+    name = "statusline",
+    exec = function(state) end,
+    -- configured, should not have data here
+    left = {"mode","basename","changed"},
+    center = {},
+    right = {"pos"},
+  },
+  {
+    name = "bufferline",
+    exec = function(state) end,
+    -- configured
+  }
+},
+{
+  __call = function(render,state)
+    for _,element in ipairs(render) do
+      element.exec(state)
+    end
   end
-  -- in other words, stupid dangerous arbitrary code execution
+})
+
+function env.handle(state)
+  -- Likely to be replaced with a table a la env.render ^^
+  -- ...but it also very well may not be
+  -- Called as env:handle() i.e. env.handle(env)
+  state.input = state.stdscr:getch()
+  -- might be possible to optimize this (less accessing) but idrk
+
+  if state.input then
+    local command = assert(state.bind[state.mode], "unknown mode")
+    -- assertation should never happen but users might make shit binds
+    for _,v in ipairs(state.menu) do
+      command = command[v]
+    end
+
+    command = command[state.input]
+
+    local cmdtype = type(command)
+
+    if cmdtype == "nil" then
+      -- key is not bound according to state.bind
+      if state.args.debug then
+      state.stdscr:addstr(
+        state.mode
+        ..((#state.menu > 0) and ("+"..table.concat(state.menu,"+")) or (""))
+        .."."..state.input
+      )
+      end
+      if #state.menu > 0 then
+        state.menu = {}
+      end
+    elseif cmdtype == "table" then
+      -- cmdtype table means a menu
+      table.insert(state.menu,state.input)
+    elseif cmdtype ~= "string" then
+      error("Bind returned impossible type")
+    else
+      assert(state.cmds[command], "No such command")(state)
+      if #state.menu > 0 then
+        state.menu = {}
+      end
+    end
+  end
+end
+
+env.lfs = require"lfs"
+-- this is the *only* use of lfs. questionable
+local confdir = (
+  env.args.config
+    :gsub("^~",os.getenv("HOME"))
+)
+for file in env.lfs.dir(confdir) do
+  if file~="." and file~=".." then
+    file = confdir.."/"..file
+    assert(loadfile(file),"Could not load config file "..file)(env)
+  end
+  -- in other words, arbitrary code execution, hooraaayyyyyy
 end
 
 return env

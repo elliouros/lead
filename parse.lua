@@ -1,4 +1,5 @@
-local function parse(arg)
+local lib = {}
+function lib.parse(arg)
   local args = {}
   local opts = {}
 
@@ -19,4 +20,4 @@ local function parse(arg)
 
   return args, opts
 end
-return parse
+return lib
